@@ -73,7 +73,7 @@ def apply_custom_led_range(ip):
 
 def discover_and_apply_effect():
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(check_ip, f"{base_ip}{i}"): i for i in range(1, 255) if i != 250}
+        futures = {executor.submit(check_ip, f"{base_ip}{i}"): i for i in range(1, 255)}
         for future in as_completed(futures):
             ip = f"{base_ip}{futures[future]}"
             try:
