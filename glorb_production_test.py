@@ -10,16 +10,17 @@ def apply_effect_to_wled(ip, effect_id, color):
     try:
         response = requests.post(f"http://{ip}/json/state", json={
             "seg": [{
-                "id": 0,  # Specify the segment ID
-                "fx": effect_id,  # Set the effect ID
+                "id": 0,  # Ensure we apply to the default segment
+                "fx": effect_id,  # Set the effect ID (0 for solid)
+                "frz": False,  # Ensure it's not frozen
+                "on": True,  # Ensure the segment is on
+                "col": [color],  # Set the color
                 "sx": 57,
                 "ix": 255,
                 "pal": 27,
                 "c1": 128,
                 "c2": 128,
                 "c3": 16,
-                "col": [color],  # Set the color
-                
             }]
         }, timeout=timeout_duration)
         
@@ -35,7 +36,10 @@ def check_ip(ip):
         response = requests.get(f"http://{ip}/json", timeout=timeout_duration)
         if response.status_code == 200 and "WLED" in response.text:
             print(f"WLED Device Found: {ip}")
-            # Sequence of colors and effects
+            # Apply the custom LED range effect
+            apply_custom_led_range(ip)
+            sleep(4)
+            # Now, apply the sequence of solid color effects
             apply_effect_to_wled(ip, 0, [255, 0, 0])  # Red
             sleep(2)
             apply_effect_to_wled(ip, 0, [0, 255, 0])  # Green
@@ -48,9 +52,28 @@ def check_ip(ip):
     except requests.exceptions.RequestException:
         pass
 
+def apply_custom_led_range(ip):
+    try:
+        led_data = {
+            "seg": {
+                "i": [
+                    0, 40, "FF0000",  # Red for LEDs 0-20
+                    40, 80, "00FF00",  # Green for LEDs 20-60
+                    80, 120, "0000FF"   # Blue for LEDs 60-80
+                ]
+            }
+        }
+        response = requests.post(f"http://{ip}/json/state", json=led_data, timeout=timeout_duration)
+        if response.status_code == 200:
+            print(f"Custom LED ranges applied to {ip}")
+        else:
+            print(f"Failed to apply custom LED range to {ip}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error applying custom LED range on {ip}: {e}")
+
 def discover_and_apply_effect():
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(check_ip, f"{base_ip}{i}"): i for i in range(1, 255) if i != 150}
+        futures = {executor.submit(check_ip, f"{base_ip}{i}"): i for i in range(1, 255) if i != 250}
         for future in as_completed(futures):
             ip = f"{base_ip}{futures[future]}"
             try:
